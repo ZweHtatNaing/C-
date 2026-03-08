@@ -19,8 +19,9 @@ using namespace std;
 6. [Algorithms](#6-algorithms)
 7. [2D Vectors](#7-2d-vectors)
 8. [Vector of Objects](#8-vector-of-objects)
-9. [Quick Reference](#quick-reference)
-10. [Common Pitfalls](#common-pitfalls)
+9. [Custom Vector Methods (VecBox)](#9-custom-vector-methods-vecbox)
+10. [Quick Reference](#quick-reference)
+11. [Common Pitfalls](#common-pitfalls)
 
 ---
 
@@ -308,6 +309,110 @@ v.erase(remove_if(v.begin(), v.end(), [](const Student& s){
 ```
 
 > **Always pass vectors of objects by `const&` to functions** to avoid expensive copying.
+
+---
+
+## 9. Custom Vector Methods (VecBox)
+
+**File:** `09_custom_vector_methods.cpp`
+
+A templated `VecBox<T>` class wraps `std::vector<T>` and adds expressive, named methods for every common operation. Works with any type (`int`, `string`, structs, etc.).
+
+### Create
+| Method | Description |
+|---|---|
+| `append(val)` | Add one element to the end |
+| `appendAll({...})` | Add multiple elements from an initialiser list |
+| `insertAt(index, val)` | Insert at a specific index (throws if out of range) |
+| `prepend(val)` | Insert at the front |
+| `fill(n, val)` | Replace all contents with n copies of val |
+
+### Read
+| Method | Description |
+|---|---|
+| `get(index)` | Element at index (throws if out of range) |
+| `first()` / `last()` | First / last element |
+| `indexOf(val)` | Index of first match (-1 if not found) |
+| `lastIndexOf(val)` | Index of last match |
+| `contains(val)` | `true` if value exists |
+| `countOf(val)` | Number of occurrences |
+| `filter(pred)` | New VecBox with elements matching predicate |
+
+### Update
+| Method | Description |
+|---|---|
+| `updateAt(index, val)` | Replace element at index |
+| `replaceFirst(old, new)` | Replace first matching value |
+| `replaceAll(old, new)` | Replace all matching values, returns count |
+| `applyAll(func)` | Transform every element in-place |
+| `applyIf(pred, func)` | Transform only elements matching predicate |
+| `swapAt(i, j)` | Swap elements at two indices |
+
+### Delete
+| Method | Description |
+|---|---|
+| `removeAt(index)` | Remove element at index |
+| `removeFirst(val)` | Remove first occurrence of value |
+| `removeAll(val)` | Remove all occurrences, returns count |
+| `removeIf(pred)` | Remove all elements matching predicate |
+| `removeFirst()` | Remove the first element |
+| `removeLast()` | Remove the last element |
+| `removeRange(from, to)` | Remove elements in range `[from, to)` |
+| `clear()` | Remove all elements |
+| `removeDuplicates()` | Keep first occurrence of each value, preserve order |
+
+### Merge
+| Method | Description |
+|---|---|
+| `merge(other)` | Append all elements of other in-place |
+| `merged(other)` | Return new VecBox = this + other |
+| `mergeUnique(other)` | Union — no duplicates, order preserved |
+| `intersection(other)` | Elements present in both |
+| `difference(other)` | Elements in this but not in other |
+
+### Sort & Split
+| Method | Description |
+|---|---|
+| `sortAsc()` / `sortDesc()` | Sort ascending / descending |
+| `sortBy(cmp)` | Sort with custom comparator |
+| `reverse()` | Reverse in-place |
+| `splitAt(mid)` | Returns `{left, right}` pair of VecBox |
+| `chunk(n)` | Split into VecBox chunks of size n |
+| `partition(pred)` | Returns `{matching, not-matching}` pair |
+
+```cpp
+VecBox<int> v = {3, 1, 4, 1, 5, 9, 2, 6};
+
+// Create
+v.append(7);
+v.insertAt(0, 99);
+
+// Read
+v.indexOf(5);              // index of first 5
+v.filter([](int x){ return x > 4; }).print("big");
+
+// Update
+v.replaceAll(1, 88);
+v.applyAll([](int x){ return x * 2; });
+
+// Delete
+v.removeAll(88);
+v.removeIf([](int x){ return x % 2 == 0; });
+v.removeDuplicates();
+
+// Merge
+VecBox<int> a = {1,2,3}, b = {3,4,5};
+a.merged(b).print("concat");         // [1,2,3,3,4,5]
+a.mergeUnique(b).print("union");     // [1,2,3,4,5]
+a.intersection(b).print("∩");        // [3]
+a.difference(b).print("a-b");        // [1,2]
+
+// Sort & Split
+v.sortAsc();
+auto [left, right] = v.splitAt(3);
+auto chunks = v.chunk(2);
+auto [evens, odds] = v.partition([](const int& x){ return x%2==0; });
+```
 
 ---
 
