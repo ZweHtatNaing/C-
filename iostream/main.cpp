@@ -7,73 +7,66 @@
 using namespace std;
 
 // ─────────────────────────────────────────────
-// FUNCTION 1: readDataSources
-//   Reads data_source.txt line by line.
-//   Each line is a CSV filename (e.g. "students.csv").
-//   Returns a vector of those filenames.
+// FUNCTION 2: readCSV
+//   Reads a single CSV file row by row.
+//   Splits each row by comma and stores fields into a vector<string>.
+//   Returns all rows as vector<vector<string>>.
 // ─────────────────────────────────────────────
-vector<string> readDataSources(const string& sourceFile) {
-    vector<string> fileNames; // will hold the list of CSV filenames
+vector<vector<string>> readCSV(const string& fileName) {
+    vector<vector<string>> rows; // holds all rows for this file
 
-    ifstream file(sourceFile); // open the data_source.txt file for reading
+    ifstream file(fileName); // open the CSV file
 
     if (!file.is_open()) {
-        cerr << "Error: cannot open " << sourceFile << endl;
-        return fileNames; // return empty vector if file not found
+        cerr << "Warning: cannot open " << fileName << " — skipping." << endl;
+        return rows; // return empty if file not found
     }
 
     string line;
-    while (getline(file, line)) {      // read one line at a time
-        if (!line.empty()) {           // skip any blank lines
-            fileNames.push_back(line); // add the filename to the vector
+    while (getline(file, line)) { // read one row at a time
+        if (line.empty()) continue; // skip blank lines
+
+        vector<string> row;     // holds the individual fields of this row
+        stringstream ss(line);  // wrap the line in a stringstream for splitting
+        string field;
+
+        while (getline(ss, field, ',')) { // split by comma
+            row.push_back(field);         // add each field to the row vector
         }
+
+        rows.push_back(row); // add the completed row to this file's rows
     }
 
     file.close(); // always close the file when done
-    return fileNames;
+    return rows;
 }
 
 // ─────────────────────────────────────────────
-// FUNCTION 2: readCSVFiles
-//   Takes the list of CSV filenames from Function 1.
-//   Reads each CSV file row by row, splits each row by comma,
-//   and stores each row (as a vector<string>) into a
-//   per-file vector.
-//   Returns a map: filename -> vector of rows (each row is a vector of fields).
+// FUNCTION 1: readDataSources
+//   Reads data_source.txt line by line.
+//   For each CSV filename found, directly calls readCSV()
+//   and stores the result in a map.
+//   Returns a map: filename -> vector of rows.
 // ─────────────────────────────────────────────
-map<string, vector<vector<string>>> readCSVFiles(const vector<string>& fileNames) {
-    // map: key = filename, value = all rows of that file
-    map<string, vector<vector<string>>> allData;
+map<string, vector<vector<string>>> readDataSources(const string& sourceFile) {
+    map<string, vector<vector<string>>> allData; // will hold data from all CSV files
 
-    for (const string& fileName : fileNames) { // loop through each CSV filename
-        ifstream file(fileName);               // open the CSV file
+    ifstream file(sourceFile); // open data_source.txt
 
-        if (!file.is_open()) {
-            cerr << "Warning: cannot open " << fileName << " — skipping." << endl;
-            continue; // skip this file and move to the next one
-        }
-
-        vector<vector<string>> rows; // holds all rows for this file
-        string line;
-
-        while (getline(file, line)) { // read one row at a time
-            if (line.empty()) continue; // skip blank lines
-
-            vector<string> row;          // holds the individual fields of this row
-            stringstream ss(line);       // wrap the line in a stringstream for splitting
-            string field;
-
-            while (getline(ss, field, ',')) { // split by comma
-                row.push_back(field);         // add each field to the row vector
-            }
-
-            rows.push_back(row); // add the completed row to this file's rows
-        }
-
-        file.close();              // close the file when done reading
-        allData[fileName] = rows;  // store all rows under the filename key
+    if (!file.is_open()) {
+        cerr << "Error: cannot open " << sourceFile << endl;
+        return allData; // return empty map if file not found
     }
 
+    string line;
+    while (getline(file, line)) {  // read one CSV filename at a time
+        if (line.empty()) continue; // skip blank lines
+
+        // Directly call readCSV for this filename — no intermediate vector
+        allData[line] = readCSV(line);
+    }
+
+    file.close(); // close data_source.txt when done
     return allData;
 }
 
@@ -81,23 +74,18 @@ map<string, vector<vector<string>>> readCSVFiles(const vector<string>& fileNames
 // Helper: prints all data in a readable format
 // ─────────────────────────────────────────────
 void printData(const map<string, vector<vector<string>>>& allData) {
-    for (const auto& entry : allData) {          // loop through each file's data
-        const string& fileName               = entry.first;  // CSV filename
-        const vector<vector<string>>& rows   = entry.second; // its rows
+    for (const auto& entry : allData) {
+        const string& fileName             = entry.first;  // CSV filename
+        const vector<vector<string>>& rows = entry.second; // its rows
 
         cout << "\n[ " << fileName << " ]" << endl;
 
         for (size_t i = 0; i < rows.size(); i++) {
-            if (i == 0) {
-                // First row is the header
-                cout << "  Header: ";
-            } else {
-                cout << "  Row " << i << ": ";
-            }
+            cout << (i == 0 ? "  Header: " : "  Row " + to_string(i) + ": ");
 
             for (size_t j = 0; j < rows[i].size(); j++) {
                 cout << rows[i][j];
-                if (j < rows[i].size() - 1) cout << " | "; // separate fields
+                if (j < rows[i].size() - 1) cout << " | ";
             }
             cout << endl;
         }
@@ -108,18 +96,11 @@ void printData(const map<string, vector<vector<string>>>& allData) {
 // MAIN
 // ─────────────────────────────────────────────
 int main() {
-    // Step 1: read data_source.txt to get the list of CSV filenames
-    vector<string> csvFiles = readDataSources("data_source.txt");
+    // readDataSources reads data_source.txt and internally calls readCSV for each file
+    map<string, vector<vector<string>>> allData = readDataSources("data_source.txt");
 
-    cout << "Found " << csvFiles.size() << " data source(s) in data_source.txt:" << endl;
-    for (const string& f : csvFiles) {
-        cout << "  - " << f << endl; // print each filename found
-    }
+    cout << "Loaded " << allData.size() << " file(s)." << endl;
 
-    // Step 2: read each CSV file and load data into vectors
-    map<string, vector<vector<string>>> allData = readCSVFiles(csvFiles);
-
-    // Print all loaded data
     printData(allData);
 
     return 0;
